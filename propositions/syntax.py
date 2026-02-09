@@ -255,7 +255,7 @@ class Formula:
         # Task 1.5
 
         formula, rest = Formula._parse_prefix(string)
-        return formula is not None and rest.strip() == ''
+        return formula is not None and rest.strip() == '' 
         
     @staticmethod
     def parse(string: str) -> Formula:
