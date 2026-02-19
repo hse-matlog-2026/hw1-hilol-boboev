@@ -79,6 +79,14 @@ def evaluate(formula: Formula, model: Model) -> bool:
             return left or right
         elif formula.root == '->':
             return (not left) or right
+        elif formula.root == '+':
+            return (left and (not right)) or ((not left) and right)
+        elif formula.root == '<->':
+            return left == right
+        elif formula.root == '-&':
+            return not (left and right)
+        elif formula.root == '-|':
+            return not (left or right)
     return False
 
 def all_models(variables: Sequence[str]) -> Iterable[Model]:

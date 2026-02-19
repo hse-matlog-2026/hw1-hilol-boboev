@@ -59,9 +59,9 @@ def is_binary(string: str) -> bool:
     Returns:
         ``True`` if the given string is a binary operator, ``False`` otherwise.
     """
-    return string == '&' or string == '|' or string == '->'
+    # return string == '&' or string == '|' or string == '->'
     # For Chapter 3:
-    # return string in {'&', '|',  '->', '+', '<->', '-&', '-|'}
+    return string in {'&', '|',  '->', '+', '<->', '-&', '-|'}
 
 @frozen
 class Formula:
@@ -221,9 +221,21 @@ class Formula:
             if first is None:
                 return None, rest
 
-            if rest.startswith('->'):
+            if rest.startswith('<->'):
+                op = '<->'
+                rest = rest[3:]
+            elif rest.startswith('->'):
                 op = '->'
                 rest = rest[2:]
+            elif rest.startswith('-&'):
+                op = '-&'
+                rest = rest[2:]
+            elif rest.startswith('-|'):
+                op = '-|'
+                rest = rest[2:]
+            elif rest.startswith('+'):
+                op = '+'
+                rest = rest[1:]
             elif rest and (rest[0] == '&' or rest[0] == '|'):
                 op = rest[0]
                 rest = rest[1:]
@@ -255,7 +267,7 @@ class Formula:
         # Task 1.5
 
         formula, rest = Formula._parse_prefix(string)
-        return formula is not None and rest.strip() == '' 
+        return formula is not None and rest.strip() == ''
         
     @staticmethod
     def parse(string: str) -> Formula:
@@ -311,9 +323,15 @@ class Formula:
                 formula, rest = parse(s[1:])
                 return Formula('~', formula), rest
 
-            if s.startswith('->'):
+            if s.startswith('<->'):
+                op, rest = '<->', s[3:]
+            elif s.startswith('-&'):
+                op, rest = '-&', s[2:]
+            elif s.startswith('->'):
                 op, rest = '->', s[2:]
-            elif s[0] in '&|':
+            elif s.startswith('-|'):
+                op, rest = '-|', s[2:]
+            elif s[0] in '&|+':
                 op, rest = s[0], s[1:]
             else:
                 raise ValueError()
@@ -351,6 +369,21 @@ class Formula:
         for variable in substitution_map:
             assert is_variable(variable)
         # Task 3.3
+        if is_variable(self.root):
+            if self.root in substitution_map:
+                return substitution_map[self.root]
+            return Formula(self.root)
+
+        if is_constant(self.root):
+            return Formula(self.root)
+
+        if is_unary(self.root):
+            return Formula(self.root, self.first.substitute_variables(substitution_map))
+
+        if is_binary(self.root):
+            first_1 = self.first.substitute_variables(substitution_map)
+            second_2 = self.second.substitute_variables(substitution_map)
+            return Formula(self.root, first_1, second_2)
 
     def substitute_operators(self, substitution_map: Mapping[str, Formula]) -> \
             Formula:
@@ -381,3 +414,26 @@ class Formula:
                    is_binary(operator)
             assert substitution_map[operator].variables().issubset({'p', 'q'})
         # Task 3.4
+
+        if is_variable(self.root):
+            return Formula(self.root)
+        if is_constant(self.root):
+            if self.root in substitution_map:
+                return substitution_map[self.root]
+            return Formula(self.root)
+
+        if is_unary(self.root):
+            first_1 = self.first.substitute_operators(substitution_map)
+            if self.root in substitution_map:
+                templ = substitution_map[self.root]
+                return templ.substitute_variables({'p': first_1})
+            return Formula(self.root, first_1)
+
+        first_1 = self.first.substitute_operators(substitution_map)
+        second_2 = self.second.substitute_operators(substitution_map)
+
+        if self.root in substitution_map:
+            templ = substitution_map[self.root]
+            return templ.substitute_variables({'p': first_1, 'q': second_2})
+
+        return Formula(self.root, first_1, second_2)
